@@ -1,0 +1,185 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { createFisherman, getNextAvailableFishermanCode } from '@/actions/fishermen';
+import { Button, Input } from '@/components/ui/core';
+import { Modal } from '@/components/ui/modal';
+
+interface Props {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
+}
+
+export function CreateFishermanDialog({ isOpen, onClose, onSuccess }: Props) {
+  const [showExtras, setShowExtras] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [nextCode, setNextCode] = useState<number | null>(null);
+
+  const { register, handleSubmit, reset, setValue, formState: { isSubmitting } } = useForm();
+
+  useEffect(() => {
+    if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setError(null);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowExtras(false);
+      reset();
+      getNextAvailableFishermanCode().then(code => {
+        setNextCode(code);
+        setValue('fishermanCode', code);
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  const onSubmit = async (data: any) => {
+    setError(null);
+    const res = await createFisherman(data);
+    if (res.success) {
+      if (onSuccess) onSuccess();
+      onClose();
+    } else {
+      setError(res.error || 'خطایی رخ داد.');
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="افزودن صیاد جدید">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {error && (
+          <div className="p-4 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">نام و نام خانوادگی *</label>
+            <Input {...register('fullName', { required: true })} placeholder="علی اکبری..." />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">شماره ثبت *</label>
+            <Input {...register('registrationNumber', { required: true })} placeholder="73/12345" dir="ltr" className="text-right" />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">تاریخ رده‌بندی (شمسی) *</label>
+            <Input 
+              {...register('classificationDateJalali', { 
+                required: true,
+                onChange: (e) => {
+                  let value = e.target.value.replace(/\D/g, '');
+                  if (value.length > 4) {
+                    value = value.slice(0, 4) + '/' + value.slice(4);
+                  }
+                  if (value.length > 7) {
+                    value = value.slice(0, 7) + '/' + value.slice(7, 9);
+                  }
+                  e.target.value = value;
+                }
+              })} 
+              placeholder="1403/05/12" dir="ltr" className="text-right" 
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">شناسه صیاد (تولید خودکار)</label>
+            <Input {...register('fishermanCode')} placeholder={`پیشنهادی: ${nextCode ?? ''}`} dir="ltr" className="text-right" />
+          </div>
+        </div>
+
+        {!showExtras ? (
+          <div className="pt-2 flex justify-center">
+            <Button type="button" variant="ghost" onClick={() => setShowExtras(true)} className="text-xs">
+              + اطلاعات تکمیلی (اختیاری)
+            </Button>
+          </div>
+        ) : (
+          <div className="pt-4 border-t border-gray-100 dark:border-gray-800 space-y-4 animate-in slide-in-from-top-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">شماره تماس</label>
+                <Input {...register('phone')} placeholder="0912..." dir="ltr" className="text-right" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">نام پدر</label>
+                <Input {...register('fatherName')} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">تاریخ تولد (شمسی)</label>
+                <Input 
+                  {...register('birthDateJalali', {
+                    onChange: (e) => {
+                      let value = e.target.value.replace(/\D/g, '');
+                      if (value.length > 4) {
+                        value = value.slice(0, 4) + '/' + value.slice(4);
+                      }
+                      if (value.length > 7) {
+                        value = value.slice(0, 7) + '/' + value.slice(7, 9);
+                      }
+                      e.target.value = value;
+                    }
+                  })} 
+                  placeholder="1360/01/01" dir="ltr" className="text-right" 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">کد ملی</label>
+                <Input {...register('nationalCode')} dir="ltr" className="text-right" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">صیدگاه</label>
+                <Input {...register('fishingArea')} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">جایگاه سوخت</label>
+                <Input {...register('fuelStation')} />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                {/* بخش وضعیت پرداخت حذف شد تا در آینده به صورت خودکار محاسبه شود */}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-800 space-y-4">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">اطلاعات موتور</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">شماره موتور</label>
+                  <Input {...register('engineNumber')} dir="ltr" className="text-right" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">نوع موتور</label>
+                  <Input {...register('engineType')} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">قدرت موتور</label>
+                  <Input {...register('enginePower')} dir="ltr" className="text-right" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">یادداشت داخلی</label>
+              <textarea 
+                {...register('internalNote')}
+                className="flex min-h-[100px] w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+              ></textarea>
+            </div>
+          </div>
+        )}
+
+        <div className="pt-4 flex justify-end gap-3 sticky bottom-0 bg-white dark:bg-gray-900 mt-4 rounded-xl">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            انصراف
+          </Button>
+          <Button type="submit" isLoading={isSubmitting} className="px-8 flex-1 sm:flex-none">
+            ثبت صیاد
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
