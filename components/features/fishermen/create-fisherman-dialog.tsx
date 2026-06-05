@@ -21,9 +21,7 @@ export function CreateFishermanDialog({ isOpen, onClose, onSuccess }: Props) {
 
   useEffect(() => {
     if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(null);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowExtras(false);
       reset();
       getNextAvailableFishermanCode().then(code => {
@@ -31,8 +29,7 @@ export function CreateFishermanDialog({ isOpen, onClose, onSuccess }: Props) {
         setValue('fishermanCode', code);
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, reset, setValue]);
 
   const onSubmit = async (data: any) => {
     setError(null);
@@ -139,7 +136,17 @@ export function CreateFishermanDialog({ isOpen, onClose, onSuccess }: Props) {
                 <Input {...register('fuelStation')} />
               </div>
               <div className="space-y-2 md:col-span-2">
-                {/* بخش وضعیت پرداخت حذف شد تا در آینده به صورت خودکار محاسبه شود */}
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">تگ وضعیت پرداخت</label>
+                <select 
+                  {...register('paymentStatusTag')}
+                  className="flex h-10 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                >
+                  <option value="">انتخاب کنید...</option>
+                  <option value="اولویت">اولویت</option>
+                  <option value="خوش‌حساب">خوش‌حساب</option>
+                  <option value="بدحساب">بدحساب</option>
+                  <option value="بی‌خیال">بی‌خیال</option>
+                </select>
               </div>
             </div>
 

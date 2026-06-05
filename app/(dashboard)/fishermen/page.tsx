@@ -1,9 +1,12 @@
 import { getFishermen } from '@/actions/fishermen';
 import { Button, Input } from '@/components/ui/core';
-import { Search, Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Search, Plus, MoreVertical, Edit2, Trash2, Pin, Eye } from 'lucide-react';
 import { daysBetweenDates, toGregorian } from '@/lib/jalali';
 import { AddFishermanButton, AddFishermanFloatingButton } from '@/components/features/fishermen/add-fisherman-buttons';
 import { FishermanRow } from '@/components/features/fishermen/fisherman-row';
+import { FishermenSearch } from '@/components/features/fishermen/fishermen-search';
+import Link from 'next/link';
 
 function calculateDaysLeft(jalaliDate: string) {
   const target = toGregorian(jalaliDate);
@@ -11,15 +14,39 @@ function calculateDaysLeft(jalaliDate: string) {
   return daysBetweenDates(new Date(), target);
 }
 
-export default async function FishermenPage() {
+export default async function FishermenPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const resolvedParams = await searchParams;
+  const q = typeof resolvedParams.q === 'string' ? resolvedParams.q.toLowerCase() : '';
+  const filterPayment = typeof resolvedParams.payment === 'string' ? resolvedParams.payment : '';
+
   const fishermenList = await getFishermen();
 
   // Enhance list with computed days left and auto-pin
-  const enhancedList = fishermenList.map(f => {
+  let enhancedList = fishermenList.map(f => {
     const daysLeft = calculateDaysLeft(f.classificationDateJalali);
     const isAutoPinned = daysLeft < 30;
     return { ...f, daysLeft, isAutoPinned };
-  }).sort((a, b) => {
+  });
+
+  if (q) {
+    enhancedList = enhancedList.filter(f => 
+      f.fullName.toLowerCase().includes(q) ||
+      f.fishermanCode.toString().includes(q) ||
+      f.registrationNumber.includes(q) ||
+      (f.phone && f.phone.includes(q)) ||
+      (f.nationalCode && f.nationalCode.includes(q))
+    );
+  }
+  
+  if (filterPayment) {
+    enhancedList = enhancedList.filter(f => f.paymentStatusTag === filterPayment);
+  }
+
+  enhancedList = enhancedList.sort((a, b) => {
     // Priority: Auto Pinned -> Manual Pinned -> ID asc
     if (a.isAutoPinned && !b.isAutoPinned) return -1;
     if (!a.isAutoPinned && b.isAutoPinned) return 1;
@@ -33,13 +60,7 @@ export default async function FishermenPage() {
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
       {/* Header and Actions */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex items-center w-full sm:w-auto max-w-lg flex-1 relative">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <Input 
-            placeholder="جستجو در صیادان..." 
-            className="w-full pr-10 text-base py-5 rounded-2xl shadow-sm"
-          />
-        </div>
+        <FishermenSearch />
       </div>
 
       {/* Main Grid */}
@@ -52,8 +73,8 @@ export default async function FishermenPage() {
               <div className="col-span-2 text-center">کد / شناسه</div>
               <div className="col-span-3">نام و نام خانوادگی</div>
               <div className="col-span-2 text-center">شماره ثبت</div>
-              <div className="col-span-1 text-center">روز</div>
-              <div className="col-span-3 text-center">برچسب‌ها</div>
+              <div className="col-span-2 text-center">روز تا رده‌بندی</div>
+              <div className="col-span-2 text-center">برچسب‌ها</div>
               <div className="col-span-1 text-center">عملیات</div>
             </div>
 
@@ -62,7 +83,11 @@ export default async function FishermenPage() {
                 <div className="py-12 text-center text-gray-500">هیچ صیادی یافت نشد.</div>
               ) : (
                 enhancedList.map((fisherman) => (
-                  <FishermanRow key={fisherman.id} fisherman={fisherman} />
+                  <FishermanRow 
+                    key={fisherman.id} 
+                    fisherman={fisherman} 
+                    allFishermenLength={enhancedList.length} 
+                  />
                 ))
               )}
             </div>
@@ -75,6 +100,12 @@ export default async function FishermenPage() {
             <h3 className="font-semibold text-gray-900 dark:text-white">عملیات اصلی</h3>
             <div className="space-y-2">
               <AddFishermanButton />
+              <Link href="/fishermen/trash" className="block w-full">
+                <Button variant="ghost" className="w-full justify-between pr-4 pl-3 !h-12 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
+                  سطل زباله
+                  <Trash2 className="h-5 w-5" />
+                </Button>
+              </Link>
             </div>
           </div>
 
